@@ -58,6 +58,7 @@ jobs:
       env: 
         REPO_URL: https://github.com/coolsnowwolf/lede
         REPO_BRANCH: master
+        UPLOAD_WETRANSFER: true
       run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
 
     - name: Clone extra luci source code
@@ -357,7 +358,14 @@ jobs:
         find ./bin/targets/ -name "*combined*img*" | xargs -i mv -f {} ./artifact/
         find ./bin/targets/ -name "*sysupgrade*bin*" | xargs -i mv -f {} ./artifact/
         
-    - name: Upload artifact
+    - name: Upload firmware to WeTransfer
+      if: steps.organize.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
+      run: |
+        curl -fsSL git.io/file-transfer | sh
+        ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
+        echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
+      
+      - name: Upload artifact
       uses: actions/upload-artifact@master
       with:
         name: OpenWrt phicomm k2
